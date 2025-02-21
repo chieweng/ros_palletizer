@@ -1,0 +1,55 @@
+<?xml version="1.0"?>
+<robot name="palletization_robot" xmlns:xacro="http://ros.org/wiki/xacro">
+
+  <xacro:include filename="$(find palletization_robot_description)/urdf/palletization_robot_macro.xacro"/>
+
+  <xacro:arg name="ur_type" default="ur30"/>
+  <xacro:arg name="left_pallet" default="true"/>
+  <xacro:arg name="right_pallet" default="true"/>
+  <xacro:arg name="pallet_width" default="0.8"/>
+  <xacro:arg name="pallet_length" default="1.2"/>
+  <xacro:arg name="pallet_height" default="0.144"/> 
+  <xacro:arg name="pallet_distx" default="0.2"/> 
+  <xacro:arg name="pallet_disty" default="0.406"/> 
+  <xacro:arg name="conveyor" default="true"/>
+  <xacro:arg name="conveyor_width" default="0.5"/>
+  <xacro:arg name="conveyor_length" default="2"/>
+  <xacro:arg name="conveyor_height" default="0.5"/>
+  <xacro:arg name="conveyor_distx" default="0"/>
+  <xacro:arg name="conveyor_disty" default="0.45"/>
+  <xacro:arg name="conveyor_angle" default="0"/>
+  <xacro:arg name="joint_limits_parameters_file" default="$(find ur_description)/config/$(arg ur_type)/joint_limits.yaml"/>
+  <xacro:arg name="kinematics_parameters_file" default="$(find ur_description)/config/$(arg ur_type)/default_kinematics.yaml"/>
+  <xacro:arg name="physical_parameters_file" default="$(find ur_description)/config/$(arg ur_type)/physical_parameters.yaml"/>
+  <xacro:arg name="visual_parameters_file" default="$(find ur_description)/config/$(arg ur_type)/visual_parameters.yaml"/>
+  <xacro:arg name="initial_positions_file" default="$(find ur_description)/config/initial_positions.yaml"/>
+  <link name="world"/>
+  
+  <!--This will create the scene where the robot is located in-->
+  <xacro:palletization_robot
+    parent="world"
+    ur_type="$(arg ur_type)"
+    initial_positions_file="$(arg initial_positions_file)"
+    joint_limits_parameters_file="$(arg joint_limits_parameters_file)"
+    kinematics_parameters_file="$(arg kinematics_parameters_file)"
+    physical_parameters_file="$(arg physical_parameters_file)"
+    visual_parameters_file="$(arg visual_parameters_file)"
+    left_pallet="$(arg left_pallet)"
+    right_pallet="$(arg right_pallet)"
+    pallet_width="$(arg pallet_width)"
+    pallet_length="$(arg pallet_length)"
+    pallet_height="$(arg pallet_height)"
+    pallet_distx="$(arg pallet_distx)"
+    pallet_disty="$(arg pallet_disty)"
+    conveyor="$(arg conveyor)"
+    conveyor_width="$(arg conveyor_width)"
+    conveyor_length="$(arg conveyor_length)"
+    conveyor_height="$(arg conveyor_height)"
+    conveyor_distx="$(arg conveyor_distx)"
+    conveyor_disty="$(arg conveyor_disty)"
+    conveyor_angle="$(arg conveyor_angle)"
+    >
+      <origin xyz="0 0 0" rpy="0 0 0" />
+  </xacro:palletization_robot>
+
+</robot>

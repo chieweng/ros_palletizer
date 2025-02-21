@@ -1,0 +1,378 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://ros.org/wiki/xacro">
+    <xacro:arg name="use_nominal_extrinsics" default="false"/>
+    <xacro:arg name="add_plug" default="false" />
+    <xacro:arg name="use_mesh" default="true" />
+
+    <xacro:arg name="transmission_hw_interface" default=""/>
+    <xacro:arg name="safety_limits" default="false"/>
+    <xacro:arg name="safety_pos_margin" default="0.15"/>
+    <xacro:arg name="safety_k_position" default="20"/>
+    <!-- ros2_control related parameters -->
+    <xacro:arg name="headless_mode" default="false" />
+    <xacro:arg name="robot_ip" default="0.0.0.0" />
+    <xacro:arg name="script_filename" default=""/>
+    <xacro:arg name="output_recipe_filename" default=""/>
+    <xacro:arg name="input_recipe_filename" default=""/>
+    <xacro:arg name="reverse_ip" default="0.0.0.0"/>
+    <xacro:arg name="script_command_port" default="50004"/>
+    <xacro:arg name="reverse_port" default="50001"/>
+    <xacro:arg name="script_sender_port" default="50002"/>
+    <xacro:arg name="trajectory_port" default="50003"/>
+    <!--   tool communication related parameters-->
+    <xacro:arg name="use_tool_communication" default="false" />
+    <xacro:arg name="tool_voltage" default="0" />
+    <xacro:arg name="tool_parity" default="0" />
+    <xacro:arg name="tool_baud_rate" default="115200" />
+    <xacro:arg name="tool_stop_bits" default="1" />
+    <xacro:arg name="tool_rx_idle_chars" default="1.5" />
+    <xacro:arg name="tool_tx_idle_chars" default="3.5" />
+    <xacro:arg name="tool_device_name" default="/tmp/ttyUR" />
+    <xacro:arg name="tool_tcp_port" default="54321" />
+
+        <!-- Simulation parameters -->
+    <xacro:arg name="use_fake_hardware" default="false" />
+    <xacro:arg name="fake_sensor_commands" default="false" />
+    <xacro:arg name="sim_gazebo" default="false" />
+    <xacro:arg name="sim_ignition" default="false" />
+    <xacro:arg name="simulation_controllers" default="" />
+
+    <!-- convert to property to use substitution in function -->
+    <xacro:property name="is_sim_gazebo" value="$(arg sim_gazebo)"/>
+    <xacro:property name="is_sim_ignition" value="$(arg sim_ignition)"/>
+
+    <xacro:include filename="$(find ur_description)/urdf/ur_macro.xacro"/>
+    <xacro:include filename="$(find realsense2_description)/urdf/_d435.urdf.xacro" />
+
+    <xacro:macro name="palletization_robot" params="
+    parent
+    *origin
+    ur_type
+    initial_positions_file
+    joint_limits_parameters_file
+    kinematics_parameters_file
+    physical_parameters_file
+    visual_parameters_file
+    left_pallet
+    right_pallet
+    pallet_width
+    pallet_length
+    pallet_height
+    pallet_distx
+    pallet_disty
+    conveyor
+    conveyor_width
+    conveyor_length
+    conveyor_height
+    conveyor_distx
+    conveyor_disty
+    conveyor_angle
+    ">  
+    <!-- convert to property to use substitution in function -->
+    <xacro:property name="left_pallet" value="$(arg left_pallet)"/>
+    <xacro:property name="right_pallet" value="$(arg right_pallet)"/>
+    <xacro:property name="pallet_width" value="$(arg pallet_width)"/>
+    <xacro:property name="pallet_length" value="$(arg pallet_length)"/>
+    <xacro:property name="pallet_height" value="$(arg pallet_height)"/>
+    <xacro:property name="pallet_distx" value="$(arg pallet_distx)"/>
+    <xacro:property name="pallet_disty" value="$(arg pallet_disty)"/>
+    <xacro:property name="conveyor" value="$(arg conveyor)"/>
+    <xacro:property name="conveyor_width" value="$(arg conveyor_width)"/>
+    <xacro:property name="conveyor_length" value="$(arg conveyor_length)"/>
+    <xacro:property name="conveyor_height" value="$(arg conveyor_height)"/>
+    <xacro:property name="conveyor_distx" value="$(arg conveyor_distx)"/>
+    <xacro:property name="conveyor_disty" value="$(arg conveyor_disty)"/>
+    <xacro:property name="conveyor_angle" value="$(arg conveyor_angle)"/>
+    <xacro:property name="initial_positions_file" default="$(arg initial_positions_file)"/>
+        <link name="robot_base_link">
+            <visual>
+                <geometry>
+                    <mesh filename="package://palletization_robot_description/meshes/robot_base.STL" scale="1 1 1"/>
+                </geometry>
+                <origin xyz="-0.175 0.633734 0" rpy="1.5708 0 0"/>
+                <material name="light_blue">
+                    <color rgba="0.68 0.85 0.90 1.0"/>
+                </material>
+            </visual>
+            <collision>
+                <geometry>
+                    <mesh filename="package://palletization_robot_description/meshes/robot_base.STL" scale="1 1 1"/>
+                </geometry>
+                <origin xyz="-0.175 0.633734 0" rpy="1.5708 0 0"/>
+            </collision>           
+        </link>
+
+        <link name="outer_lifter_link">
+            <visual>
+                <geometry>
+                    <mesh filename="package://palletization_robot_description/meshes/lifter_outer.STL" scale="1 1 1"/>
+                </geometry>
+                <origin xyz="-0.1 -0.1 -0.01" rpy="0 0 0"/>
+                <material name="metallic_silver">
+                    <color rgba="0.8 0.8 0.8 1.0"/>
+                </material>
+            </visual>
+            <collision>
+                <geometry>
+                    <mesh filename="package://palletization_robot_description/meshes/lifter_outer.STL" scale="1 1 1"/>
+                </geometry>
+                <origin xyz="-0.1 -0.1 -0.01" rpy="0 0 0"/>
+            </collision>
+        </link>
+
+        <link name="middle_lifter_link">
+            <visual>
+                <geometry>
+                    <mesh filename="package://palletization_robot_description/meshes/lifter_middle.STL" scale="1 1 1"/>
+                </geometry>
+                <origin xyz="-0.08 -0.07 0" rpy="0 0 0"/>
+                <material name="metallic_silver">
+                    <color rgba="0.8 0.8 0.8 1.0"/>
+                </material>
+            </visual>
+            <collision>
+                <geometry>
+                    <mesh filename="package://palletization_robot_description/meshes/lifter_middle.STL" scale="1 1 1"/>
+                </geometry>
+                <origin xyz="-0.08 -0.07 0" rpy="0 0 0"/>
+            </collision>
+        </link>
+
+        <link name="inner_lifter_link">
+            <visual>
+                <geometry>
+                    <mesh filename="package://palletization_robot_description/meshes/lifter_inner.STL" scale="1 1 1"/>
+                </geometry>
+                <origin xyz="-0.1 -0.1 0" rpy="0 0 0"/>
+                <material name="metallic_silver">
+                    <color rgba="0.8 0.8 0.8 1.0"/>
+                </material>
+            </visual>
+            <collision>
+                <geometry>
+                    <mesh filename="package://palletization_robot_description/meshes/lifter_inner.STL" scale="1 1 1"/>
+                </geometry>
+                <origin xyz="-0.1 -0.1 0" rpy="0 0 0"/>
+            </collision>
+        </link>
+
+        <link name="adapter_link">
+            <visual>
+                <geometry>
+                    <mesh filename="package://robot_description/meshes/robot_base_adapter.STL" scale="1 1 1"/>
+                </geometry>
+                <origin xyz="-0.14142 -0.14142 -0.005" rpy="-1.5708 0 0"/>
+                <material name="metallic_silver">
+                    <color rgba="0.8 0.8 0.8 1.0"/>
+                </material>
+            </visual>
+            <collision>
+                <geometry>
+                    <mesh filename="package://robot_description/meshes/robot_base_adapter.STL" scale="1 1 1"/>
+                </geometry>
+                <origin xyz="-0.14142 -0.14142 -0.005" rpy="-1.5708 0 0"/>
+            </collision>
+        </link>
+
+        <link name="gripper_link"/>
+
+        <link name="grasp_link"/>
+
+        <link name="camera_collision">
+            <visual>
+            <geometry>
+                <box size="0.035 0.1 0.035"/>
+            </geometry>
+            <material name="camera_bounding_box">
+                <color rgba="0.5 0.5 0.5 0.5"/>
+            </material>
+            <origin xyz="0 0 0.0125" rpy="0 0 0"/>
+            </visual>
+            <collision>
+            <geometry>
+                <box size="0.035 0.1 0.035"/>
+            </geometry>
+            <origin xyz="0 0 0.0125" rpy="0 0 0"/>
+            </collision>
+        </link>
+
+        <joint name="parent_base_joint" type="fixed">
+            <parent link="${parent}" />
+            <child link="robot_base_link" />
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+        </joint>
+
+        <joint name="base_outer_joint" type="fixed">
+            <parent link="robot_base_link" />
+            <child link="outer_lifter_link" />
+            <origin xyz="0 0 0.05844" rpy="0 0 0"/>
+        </joint>
+
+        <joint name="outer_middle_joint" type="prismatic">
+            <parent link="outer_lifter_link"/>
+            <child link="middle_lifter_link"/>
+            <axis xyz="0 0 1"/>
+            <limit lower="0" upper="0.382" effort="100" velocity="0.5"/>
+            <origin xyz="0 0 0.05" rpy="0 0 0"/>
+        </joint>
+
+        <joint name="middle_inner_joint" type="prismatic">
+            <parent link="middle_lifter_link"/>
+            <child link="inner_lifter_link"/>
+            <axis xyz="0 0 1"/>
+            <limit lower="0" upper="0.377" effort="100" velocity="0.5"/>
+            <origin xyz="0 0 0.025991" rpy="0 0 0"/>
+        </joint>
+
+        <joint name="inner_adpter_joint" type="fixed">
+            <parent link="inner_lifter_link" />
+            <child link="adapter_link" />
+            <origin xyz="0 0 0.584" rpy="0 0 0"/>
+        </joint>
+
+        <joint name="adapter_ur_robot_joint" type="fixed">
+            <parent link="adapter_link" />
+            <child link="base" />
+        </joint>
+
+        <joint name="ur_tool0_gripper_joint" type="fixed">
+            <parent link="tool0" />
+            <child link="gripper_link" />
+        </joint>       
+
+        <joint name="gripper_grasp_joint" type="fixed">
+            <parent link="gripper_link" />
+            <child link="grasp_link" />
+            <origin xyz="0 0 0.25" rpy="0 0 0"/>
+        </joint>  
+
+        <joint name="camera_collision_joint" type="fixed">
+            <parent link="camera_bottom_screw_frame"/>
+            <child link="camera_collision"/>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+        </joint>
+        <!--This will create the camera-->
+        <xacro:sensor_d435 parent="flange" use_nominal_extrinsics="$(arg use_nominal_extrinsics)" add_plug="$(arg add_plug)" use_mesh="$(arg use_mesh)">
+            <origin xyz="0 0 -0.1" rpy="3.14159 0 0"/>
+        </xacro:sensor_d435>
+
+        <!--This will create the specific robot-->
+        <xacro:ur_robot
+            name="ur"
+            tf_prefix=""
+            parent="adapter_link"
+            joint_limits_parameters_file="${joint_limits_parameters_file}"
+            kinematics_parameters_file="${kinematics_parameters_file}"
+            physical_parameters_file="${physical_parameters_file}"
+            visual_parameters_file="${visual_parameters_file}"
+            transmission_hw_interface="$(arg transmission_hw_interface)"
+            safety_limits="$(arg safety_limits)"
+            safety_pos_margin="$(arg safety_pos_margin)"
+            safety_k_position="$(arg safety_k_position)"
+            use_fake_hardware="$(arg use_fake_hardware)"
+            fake_sensor_commands="$(arg fake_sensor_commands)"
+            sim_gazebo="$(arg sim_gazebo)"
+            sim_ignition="$(arg sim_ignition)"
+            headless_mode="$(arg headless_mode)"
+            initial_positions="${xacro.load_yaml(initial_positions_file)}"
+            use_tool_communication="$(arg use_tool_communication)"
+            tool_voltage="$(arg tool_voltage)"
+            tool_parity="$(arg tool_parity)"
+            tool_baud_rate="$(arg tool_baud_rate)"
+            tool_stop_bits="$(arg tool_stop_bits)"
+            tool_rx_idle_chars="$(arg tool_rx_idle_chars)"
+            tool_tx_idle_chars="$(arg tool_tx_idle_chars)"
+            tool_device_name="$(arg tool_device_name)"
+            tool_tcp_port="$(arg tool_tcp_port)"
+            robot_ip="$(arg robot_ip)"
+            script_filename="$(arg script_filename)"
+            output_recipe_filename="$(arg output_recipe_filename)"
+            input_recipe_filename="$(arg input_recipe_filename)"
+            reverse_ip="$(arg reverse_ip)"
+            script_command_port="$(arg script_command_port)"
+            reverse_port="$(arg reverse_port)"
+            script_sender_port="$(arg script_sender_port)"
+            trajectory_port="$(arg trajectory_port)"
+            >
+            <origin xyz="0 0 0" rpy="0 0 0" />
+        </xacro:ur_robot>
+
+        <xacro:if value="${left_pallet}">
+            <link name="left_pallet_link">
+                <visual>
+                    <geometry>
+                        <mesh filename="package://palletization_robot_description/meshes/euro_pallet.STL" scale="${pallet_length / 1.2} ${pallet_height / 0.144} ${pallet_width / 0.8}" />
+                    </geometry>
+                    <origin xyz="0 0 0" rpy="1.5708 0 1.5708"/>
+                    <material name="wood_brown">
+                        <color rgba="0.59 0.29 0.0 1.0"/> <!-- Wooden color -->
+                    </material>
+                </visual>
+                <collision>
+                    <geometry>
+                        <mesh filename="package://palletization_robot_description/meshes/euro_pallet.STL" scale="${pallet_length / 1.2} ${pallet_height / 0.144} ${pallet_width / 0.8}" />
+                    </geometry>
+                    <origin xyz="0 0 0" rpy="1.5708 0 1.5708"/>
+                </collision>
+            </link>
+
+            <joint name="world_left_pallet_joint" type="fixed">
+                <parent link="world"/>
+                <child link="left_pallet_link"/>
+                <origin xyz="${pallet_distx} ${-pallet_disty} 0" rpy="0 0 0"/> 
+            </joint>
+        </xacro:if>
+
+        <xacro:if value="${right_pallet}">
+            <link name="right_pallet_link">
+                <visual>
+                    <geometry>
+                        <mesh filename="package://palletization_robot_description/meshes/euro_pallet.STL" scale="${pallet_length / 1.2} ${pallet_height / 0.144} ${pallet_width / 0.8}" />
+                    </geometry>
+                    <origin xyz="0 0 0" rpy="1.5708 0 1.5708"/>
+                    <material name="wood_brown">
+                        <color rgba="0.59 0.29 0.0 1.0"/> <!-- Wooden color -->
+                    </material>
+                </visual>
+                <collision>
+                    <geometry>
+                        <mesh filename="package://palletization_robot_description/meshes/euro_pallet.STL" scale="${pallet_length / 1.2} ${pallet_height / 0.144} ${pallet_width / 0.8}" />
+                    </geometry>
+                    <origin xyz="0 0 0" rpy="1.5708 0 1.5708"/>
+                </collision>
+            </link>
+
+            <joint name="world_right_pallet_joint" type="fixed">
+                <parent link="world"/>
+                <child link="right_pallet_link"/>
+                <origin xyz="${-pallet_distx - pallet_width} ${-pallet_disty} 0" rpy="0 0 0"/> 
+            </joint>
+        </xacro:if>
+
+        <xacro:if value="${conveyor}">
+            <link name="conveyor_link">
+                <visual>
+                    <geometry>
+                        <mesh filename="package://palletization_robot_description/meshes/conveyor.STL" scale="${conveyor_width} ${conveyor_height + 0.05} ${conveyor_length}" />
+                    </geometry>
+                    <origin xyz="${- conveyor_width / 2} 0 0" rpy="1.5708 0 0"/>
+                    <material name="light_green">
+                        <color rgba="0.5 1.0 0.5 1.0"/> 
+                    </material>
+                </visual>
+                <collision>
+                    <geometry>
+                        <mesh filename="package://palletization_robot_description/meshes/conveyor.STL" scale="${conveyor_width} ${conveyor_height + 0.05} ${conveyor_length}" />
+                    </geometry>
+                    <origin xyz="${- conveyor_width / 2} 0 0" rpy="1.5708 0 0"/>
+                </collision>
+            </link>
+
+            <joint name="world_conveyor_joint" type="fixed">
+                <parent link="world"/>
+                <child link="conveyor_link"/>
+                <origin xyz="${conveyor_distx} ${-conveyor_disty - conveyor_width / 2} 0" rpy="0 0 ${conveyor_angle}"/> 
+            </joint>
+        </xacro:if>
+    </xacro:macro>
+</robot>

@@ -1,0 +1,33 @@
+{
+    "python.autoComplete.extraPaths": [
+        "/home/chieweng/ros2_ws/install/py_srvcli/lib/python3.10/site-packages",
+        "/home/chieweng/ros2_ws/install/palletizer_server_interface/local/lib/python3.10/dist-packages",
+        "/home/chieweng/ros2_ws/install/palletizer_server/lib/python3.10/site-packages",
+        "/home/chieweng/ros2_ws/install/palletizer_ocs/lib/python3.10/site-packages",
+        "/home/chieweng/ros2_ws/install/palletization_vision_server/lib/python3.10/site-packages",
+        "/home/chieweng/ros2_ws/install/palletization_vision_interface/local/lib/python3.10/dist-packages",
+        "/home/chieweng/ros2_ws/install/palletization_robot_node/lib/python3.10/site-packages",
+        "/home/chieweng/ros2_ws/install/palletization_program_manager/lib/python3.10/site-packages",
+        "/home/chieweng/ros2_ws/install/pallet_visualisation/lib/python3.10/site-packages",
+        "/home/chieweng/ros2_ws/install/bin_vision_server/lib/python3.10/site-packages",
+        "/home/chieweng/ros2_ws/install/bin_vision_interface/local/lib/python3.10/dist-packages",
+        "/opt/ros/humble/lib/python3.10/site-packages",
+        "/opt/ros/humble/local/lib/python3.10/dist-packages"
+    ],
+    "python.analysis.extraPaths": [
+        "/home/chieweng/ros2_ws/install/py_srvcli/lib/python3.10/site-packages",
+        "/home/chieweng/ros2_ws/install/palletizer_server_interface/local/lib/python3.10/dist-packages",
+        "/home/chieweng/ros2_ws/install/palletizer_server/lib/python3.10/site-packages",
+        "/home/chieweng/ros2_ws/install/palletizer_ocs/lib/python3.10/site-packages",
+        "/home/chieweng/ros2_ws/install/palletization_vision_server/lib/python3.10/site-packages",
+        "/home/chieweng/ros2_ws/install/palletization_vision_interface/local/lib/python3.10/dist-packages",
+        "/home/chieweng/ros2_ws/install/palletization_robot_node/lib/python3.10/site-packages",
+        "/home/chieweng/ros2_ws/install/palletization_program_manager/lib/python3.10/site-packages",
+        "/home/chieweng/ros2_ws/install/pallet_visualisation/lib/python3.10/site-packages",
+        "/home/chieweng/ros2_ws/install/bin_vision_server/lib/python3.10/site-packages",
+        "/home/chieweng/ros2_ws/install/bin_vision_interface/local/lib/python3.10/dist-packages",
+        "/opt/ros/humble/lib/python3.10/site-packages",
+        "/opt/ros/humble/local/lib/python3.10/dist-packages"
+    ],
+    "cmake.sourceDirectory": "/home/chieweng/ros2_ws/src/team_one_plus_v2/palletization_robot_description"
+}

@@ -1,0 +1,6 @@
+---
+bool success
+string message
+BoxPose[] source_coord
+BoxPose[] target_coord
+BoxPose optimal_target

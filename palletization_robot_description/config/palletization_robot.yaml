@@ -1,0 +1,23 @@
+# UR Robot type
+ur_type: "ur30"
+# Spawn pallet
+left_pallet: true
+right_pallet: true
+# Pallet dimensions (metres)
+pallet_width: 0.8
+pallet_length: 1.2
+pallet_height: 0.144
+# Pallet distance measured from center of robot arm (metres)
+pallet_distx: 0.2
+pallet_disty: 0.406
+# Spawn conveyor
+conveyor: true
+# Conveyor dimensions (metres)
+conveyor_width: 0.5
+conveyor_length: 2
+conveyor_height: 0.5
+# Distance of conveyor measured from the center of the robot arm (metres)
+conveyor_distx: 0
+conveyor_disty: 0.45
+# Angle of conveyor. (0 degrees: conveyor coming directly in front, 90 degrees(1.5708 rads): coming from left, -90 degrees(-1.5708 rads): coming from right
+conveyor_angle: 0.5
