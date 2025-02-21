@@ -17,8 +17,8 @@ class PalletizationService(Node):
 
     def __init__(self):
         """
-        Initialises the setup based on YAML file and subscribes to the 
-        relevant topics to find the location of the boxes.
+        Initialises the setup based on vision_param.yaml file and subscribes to the 
+        relevant topics required for box_pose calculations
         """
 
         super().__init__('palletization_service')
@@ -27,32 +27,32 @@ class PalletizationService(Node):
         self.declare_parameter('camera_id', 0)
         self.camera_id = self.get_parameter('camera_id').value
         
-        # Declare publisher dictionaries
+        # Declare publisher dictionaries, this will initialize camera_id (key): publisher object (item)
         self.pose_publishers = {}
         self.box_images = {}
 
-        # Create custom objects
+        # Initialize objects
         self.box = BoxDetection()
         self.pose = PoseSelector()
         self.util = Utilities()
 
-        # For lookup transform
+        # Initialize lookup transform
         self.tf_buffer = Buffer()
         self.tf_listener = TransformListener(self.tf_buffer, self)
 
         # Parameter list with default values
         param_list = {
-            'get_pose.roi': [0, 0, 1280, 720],  # Default region of interest
-            'get_pose.priority': 'topleft',      # Default priority
-            'get_pose.topic': 'camera_link',     # Default camera topic
-            'get_pose.cameraDirection': 'x',     # Default camera direction
-            'get_pose.width': 0.4,               # Default width
-            'get_pose.height': 0.3,              # Default height
-            'get_pose.frames': 1,               # Default number of frames
-            'get_pose.average': False,             # Default average flag
-            'get_pose.targetFrame': 'base_link', # Default target frame for transform
-            'get_pose.useDepthFiltering': False,  # Use depth with canny edge
-            'get_pose.binDetection': False,       # Detect Bin or boxes
+            'camera.roi': [0, 0, 1280, 720],  # Default region of interest
+            'camera.priority': 'topleft',      # Default priority
+            'camera.topic': 'camera_link',     # Default camera topic
+            'camera.cameraDirection': 'x',     # Default camera direction
+            'camera.width': 0.4,               # Default width
+            'camera.height': 0.3,              # Default height
+            'camera.frames': 1,               # Default number of frames
+            'camera.average_pose': False,             # Default average flag
+            'camera.targetFrame': 'base_link', # Default target frame for transform
+            'camera.useDepthFiltering': False,  # Use depth with canny edge
+            'camera.binDetection': False,       # Detect Bin or boxes
 
             'normal_canny.gaussianKernel': 11,
             'normal_canny.cannyMin': 30,
@@ -87,7 +87,7 @@ class PalletizationService(Node):
             'bin.enhanceEdge': 9
         }
 
-        # Declare parameters 
+        # Declare parameters, update parameter values according to YAML file
         for param, default_value in param_list.items():
                 self.declare_parameter(param, default_value)
                 actual_value = self.get_parameter(param).value
@@ -97,21 +97,21 @@ class PalletizationService(Node):
                 else:
                     self.get_logger().info(f"Parameter '{param}' OVERRIDDEN with final value: {actual_value}.")
                     
-        # # Create subscribers for RGB and depth images
+        # # Create subscribers for RGB and depth images (Intel RealSense)
         # self.subscription_rgb = Subscriber(self, Image, '/camera/camera/color/image_raw')
         # self.depth_sub = Subscriber(self, Image, '/camera/camera/aligned_depth_to_color/image_raw')
         # self.info_sub = Subscriber(self, CameraInfo, '/camera/camera/color/camera_info')
 
-        # Create subscribers for RGB and depth images
+        # Create subscribers for RGB and depth images (Feynman Camera)
         self.subscription_rgb = Subscriber(self, Image, '/feynman_camera/snM1NB118G25012101/rgb/image_rect_color')
         self.depth_sub = Subscriber(self, Image, '/feynman_camera/snM1NB118G25012101/depthalignrgb/image_raw')
         self.info_sub = Subscriber(self, CameraInfo, '/feynman_camera/snM1NB118G25012101/rgb/camera_info')
 
         # Create a time synchronizer
         self.ts = ApproximateTimeSynchronizer([self.subscription_rgb, self.depth_sub, self.info_sub], queue_size=10, slop=0.1)
-        self.ts.registerCallback(self.palletization_callback)
+        self.ts.registerCallback(self.main_callback)
 
-        # Create a publisher node for the pose and detected box image
+        # Create a publisher node for box_pose and box_image
         self.pose_publishers[self.camera_id] = self.create_publisher(PoseStamped, f'/box_pose{self.camera_id}', 10)
         self.box_images[self.camera_id] = self.create_publisher(Image, f'/box_image{self.camera_id}', 10)
 
@@ -119,7 +119,7 @@ class PalletizationService(Node):
         self.br_rgb = CvBridge()
         self.br_depth = CvBridge()
 
-        # Intrinsics of the camera
+        # Camera intrinsics
         self.intrinsics = None
 
         # Create trigger service
@@ -130,62 +130,78 @@ class PalletizationService(Node):
         # Array containing X, Y, Z, Roll, Pitch, Yaw, Box ID for each box
         self.poses = []
 
-        # Buffer to store past 10 frames of poses
+        # Buffer to store past frames of box_poses
         self.pose_buffer = []
 
-    def palletization_callback(self, rgb_msg, depth_msg, info_msg):
+    def main_callback(self, rgb_msg, depth_msg, info_msg):
         """
-        Main callback function to determine the optimal pose
-        """
-        # Obtain camera intrinsic information
+        Main callback function to determine box poses.
+
+        This function retrieves camera intrinsic parameters, detects boxes, calculates the respective 3D poses, and updates self.pose_buffer further processing.
+        
+        Args:
+            rgb_msg (sensor_msgs.msg.Image): RGB image from the camera.
+            depth_msg (sensor_msgs.msg.Image): Depth image from the camera.
+            info_msg (sensor_msgs.msg.CameraInfo): Camera intrinsic info.
+        """    
+        # Extract camera intrinsic parameters
         intrinsics = Camera.get_intrinsics_from_msg(info_msg)
         
-        # Find the location of all detected boxes
+        # Detect boxes in the image
         boxes = self.detection_callback(rgb_msg, depth_msg, intrinsics)
         
-        # Update the poses in the depth callback
+        # Compute 3D poses for detected boxes
         self.poses = self.box.calculate_3d_poses(depth_msg, boxes, intrinsics)
         
-        # Update the buffer
+        # Store the computed poses in the buffer
         self.pose_buffer.append(self.poses)
         
-        if len(self.pose_buffer) > self.get_parameter('get_pose.frames').value:
+        # Maintain a fixed buffer size, as per YAML configuration
+        if len(self.pose_buffer) > self.get_parameter('camera.frames').value:
             self.pose_buffer.pop(0)
 
     def trigger_callback(self, request, response):
         """
-        Trigger response called when client requests optimal pose
+        Handles client requests for obtaining optimal box_pose
+
+        Args:
+            request: The request object. (None as per GetPoses.srv file)
+            response: The response object.
+        Returns:
+            Updated response object with the optimal pose information.
         """
 
         self.get_logger().info("Trigger service callback")
 
+        # Check if any poses are available
         if not self.poses:
             response.message = "No boxes detected"
             return response    
 
-        if len(self.pose_buffer) < self.get_parameter('get_pose.frames').value:
+        # Ensure sufficient buffer frames have been collected
+        if len(self.pose_buffer) < self.get_parameter('camera.frames').value:
             response.message = "Not enough frames collected"
             return response
         
         print(self.pose_buffer)
-        print(self.get_parameter('get_pose.average').value)
+        print(self.get_parameter('camera.average_pose').value)
 
-        # Calculate the average poses from the buffered poses
-        average_poses = self.pose.calculate_average_poses(self.pose_buffer, self.get_parameter('get_pose.average').value)
+        # Compute the average pose from the buffer frames
+        average_poses = self.pose.calculate_average_poses(self.pose_buffer, self.get_parameter('camera.average_pose').value)
         
-        # Find the topmost pose based on the lowest z value
+        # Identify the topmost box based on lowest z-value
         topmost_pose = self.pose.find_topmost_pose(average_poses)
         
-        # Filter poses to those within 0.1m of the topmost z value
+        # Filter poses close to the topmost box (within 0.1m)
         filtered_poses = self.pose.filter_poses_by_topmost(average_poses, topmost_pose[2])
         
-        # Find the optimal pose based on the priority
-        optimal_pose = self.pose.find_optimal_pose(filtered_poses, self.get_parameter('get_pose.priority').value)
+        # Select the optimal pose based on the defined priority
+        optimal_pose = self.pose.find_optimal_pose(filtered_poses, self.get_parameter('camera.priority').value)
 
         response.success = False
 
         if optimal_pose:
-            target_frame = self.get_parameter('get_pose.targetFrame').value
+            target_frame = self.get_parameter('camera.targetFrame').value
 
             for pose in self.poses:
                 source_box_pose = BoxPose()
@@ -199,7 +215,8 @@ class PalletizationService(Node):
                 source_box_pose.barcode = pose[7]
                 response.source_coord.append(source_box_pose)
 
-                transformed_coord = self.transform_coordinates(pose[:3], target_frame, self.get_parameter('get_pose.topic').value)
+                # Transform coordinates
+                transformed_coord = self.transform_coordinates(pose[:3], target_frame, self.get_parameter('camera.topic').value)
                 
                 if transformed_coord is not None:
                     target_box_pose = BoxPose()
@@ -213,12 +230,12 @@ class PalletizationService(Node):
                     target_box_pose.barcode = pose[7]
                     response.target_coord.append(target_box_pose)
 
-            # Transform target frame wrt camera frame to target frame wrt robot base frame
+            # Transform target frame wrt camera frame to robot base frame
             source_coord = optimal_pose[:3]
-            transformed_coord = self.transform_coordinates(source_coord, target_frame, self.get_parameter('get_pose.topic').value)
+            transformed_coord = self.transform_coordinates(source_coord, target_frame, self.get_parameter('camera.topic').value)
 
             # Create the response message
-            response.message = self.util.create_response_message(optimal_pose, self.poses, self.get_parameter('get_pose.priority').value)
+            response.message = self.util.create_response_message(optimal_pose, self.poses, self.get_parameter('camera.priority').value)
             
             # Will add attribute to response to hold transformed_coord and not transformed_coord
             if transformed_coord is not None:
@@ -238,7 +255,7 @@ class PalletizationService(Node):
                 self.get_logger().info("Coordinate not yet transformed")
 
             # Create and publish the PoseStamped message for visualization
-            pose_viz = self.util.create_pose_viz(optimal_pose, self.get_parameter('get_pose.cameraDirection').value, self.get_clock().now().to_msg(), self.get_parameter('get_pose.topic').value)
+            pose_viz = self.util.create_pose_viz(optimal_pose, self.get_parameter('camera.cameraDirection').value, self.get_clock().now().to_msg(), self.get_parameter('camera.topic').value)
 
             self.pose_publishers[self.camera_id].publish(pose_viz)
 
@@ -247,74 +264,61 @@ class PalletizationService(Node):
 
         return response
     
-    def detection_callback(self, msg, depth_msg, intrinsics):
+    def detection_callback(self, rgb_msg, depth_msg, intrinsics):
+        """
+        Detects objects in the given image and extracts relevant features.
+        
+        Args:
+            msg: The RGB image message.
+            depth_msg: The depth image message.
+            intrinsics: Camera intrinsic parameters.
+        
+        Returns:
+            List of detected boxes with their coordinates.
+        """
+        
         if intrinsics is None:
             return
 
-        # Obtain 2D frame
-        current_frame = self.util.process_image(msg)
+        # Convert image message to frame
+        current_frame = self.util.process_image(rgb_msg)
 
-        # Extract ROI and get its starting coordinates
-        roi = self.get_parameter('get_pose.roi').value
-
-        roi_rgb, x_start, y_start = self.util.extract_roi(current_frame, roi[0], roi[1], roi[2], roi[3])
+        roi = self.get_parameter('camera.roi').value
+        roi_rgb, x_start, y_start = self.util.extract_roi(current_frame, *roi)
 
         # Obtain depth map
         depth_image = self.br_depth.imgmsg_to_cv2(depth_msg, desired_encoding='passthrough')
 
-        if self.get_parameter('get_pose.binDetection').value:
-            roi_depth, _, _ = self.util.extract_roi(depth_image, roi[0], roi[1], roi[2], roi[3])
-            edge = self.box.detect_bin(roi_rgb, 
-                                       roi_depth, 
-                                       depth_tolerance=self.get_parameter('bin.depthTolerance').value*1000, 
-                                       cannyMin=self.get_parameter('bin.cannyMin').value, 
-                                       cannyMax=self.get_parameter('bin.cannyMax').value, 
-                                       dilK=self.get_parameter('bin.dilK').value, 
-                                       eroK=self.get_parameter('bin.eroK').value, 
-                                       dilIter=self.get_parameter('bin.dilIter').value, 
-                                       eroIter=self.get_parameter('bin.eroIter').value, 
-                                       apertureSize=self.get_parameter('bin.apertureSize').value, 
-                                       L2gradient=self.get_parameter('bin.L2gradient').value, 
-                                       enhanceEdge=self.get_parameter('bin.enhanceEdge').value)
-        else:
-            if self.get_parameter('get_pose.useDepthFiltering').value:
-                roi_depth, _, _ = self.util.extract_roi(depth_image, roi[0], roi[1], roi[2], roi[3])
-                edge = self.box.detect_edges_with_depth(roi_rgb, 
-                                                        roi_depth, 
-                                                        depth_tolerance=self.get_parameter('depth_canny.depthTolerance').value*1000, 
-                                                        gaussK=self.get_parameter('depth_canny.gaussianKernelDepth').value, 
-                                                        cannyMin=self.get_parameter('depth_canny.cannyMinDepth').value, 
-                                                        cannyMax=self.get_parameter('depth_canny.cannyMaxDepth').value, 
-                                                        dilK=self.get_parameter('depth_canny.dilationKernelDepth').value, 
-                                                        eroK=self.get_parameter('depth_canny.erosionKernelDepth').value, 
-                                                        dilIter=self.get_parameter('depth_canny.dilationIterDepth').value, 
-                                                        eroIter=self.get_parameter('depth_canny.erosionIterDepth').value, 
-                                                        apertureSize=self.get_parameter('depth_canny.apertureSize').value, 
-                                                        L2gradient=self.get_parameter('depth_canny.L2gradient').value, 
-                                                        enhanceEdge=self.get_parameter('depth_canny.enhanceEdge').value, 
-                                                        palletCamDist=self.get_parameter('depth_canny.palletCamDist').value*1000)
+        if self.get_parameter('camera.binDetection').value:
+            roi_depth, _, _ = self.util.extract_roi(depth_image, *roi)
+            
+            bin_params = self.get_parameter("bin").value # Convert ROS2 parameter to dictionary, returns the actual dictionary stored in ROS param
+            edge = self.box.detect_bin(roi_rgb, roi_depth, **bin_params)
+        
+        else: 
+            if self.get_parameter('camera.useDepthFiltering').value:
+                roi_depth, _, _ = self.util.extract_roi(depth_image, *roi)
+                
+                depth_canny_params = self.get_parameter("depth_canny").value
+                
+                # Manually scale specific values, convert m to mm
+                depth_canny_params["depth_tolerance"] *= 1000 
+                depth_canny_params["palletCamDist"] *= 1000 
+
+                edge = self.box.detect_edges_with_depth(roi_rgb, roi_depth, **depth_canny_params)
+
             else:
-                # Detect edges in the ROI
-                edge = self.box.detect_edges(roi_rgb, 
-                                            gaussK=self.get_parameter('normal_canny.gaussianKernel').value, 
-                                            cannyMin=self.get_parameter('normal_canny.cannyMin').value, 
-                                            cannyMax=self.get_parameter('normal_canny.cannyMax').value, 
-                                            dilK=self.get_parameter('normal_canny.dilationKernel').value, 
-                                            eroK=self.get_parameter('normal_canny.erosionKernel').value, 
-                                            dilIter=self.get_parameter('normal_canny.dilationIter').value, 
-                                            eroIter=self.get_parameter('normal_canny.erosionIter').value)
+                normal_canny_params = self.get_parameter("normal_canny").value
+                edge = self.box.detect_edges(roi_rgb, **normal_canny_params)
 
-        # Find contours in the edge-detected image
+        # Find and filter contours in the edge-detected image
         contours = self.box.find_contours(edge)
+        filtered_boxes = self.box.filter_contours(contours, depth_image, intrinsics, x_start, y_start, self.get_parameter('camera.width').value, self.get_parameter('camera.height').value)
 
-        # Filter contours based on area and overlap
-        filtered_boxes = self.box.filter_contours(contours, depth_image, intrinsics, x_start, y_start, self.get_parameter('get_pose.width').value, self.get_parameter('get_pose.height').value)
+        # Draw detected boxes and labels on the original image
+        boxes = self.util.draw_boxes(current_frame, filtered_boxes, x_start, y_start, roi_rgb, depth_image, intrinsics, self.get_parameter('camera.binDetection').value)
 
-        # Draw filtered boxes and labels on the original frame
-        boxes = self.util.draw_boxes(current_frame, filtered_boxes, x_start, y_start, roi_rgb, depth_image, intrinsics, self.get_parameter('get_pose.binDetection').value)
-
-        # Publish the image to the topic
-        # self.get_logger.info(type(self.box_images[self.camera_id]))
+        # Publish the processed box_image
         self.box_images[self.camera_id].publish(self.br_rgb.cv2_to_imgmsg(current_frame, encoding="rgb8"))
 
         return boxes

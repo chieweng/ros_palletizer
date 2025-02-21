@@ -91,7 +91,3 @@ Brief explanation of existing files.
 2. Gripper control.
 3. Palletizing sequences.
 
-## Contact
-
-Tey Yu Teng:
-[yutengtey868@gmail.com](mailto:yutengtey868@gmail.com)

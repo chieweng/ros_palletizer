@@ -185,15 +185,6 @@ binDetection: Bin or box detection
 1. Dark colors such as black affects the depth data.
 2. Setup of the camera is very important. This program runs under the assumption the boxes are directly below the camera.
 
-## Acknowledgment
-Milind Bordia for providing the code for box detection algorithm and getting the box poses w.r.t. camera frame.
-
 ## Contact
-Milind Bordia:
-[milind.bordia@gmail.com](mailto:milind.bordia@gmail.com)
-
-Tey Yu Teng:
-[yutengtey868@gmail.com](mailto:yutengtey868@gmail.com)
-
 Chie Weng:
 [chiekencoop@gmail.com](mailto:chiekencoop@gmail.com)

@@ -24,7 +24,3 @@ ros2 launch palletization_robot_description camera_robot.launch.py
 ```bash
 ros2 param set /palletization_robot_description conveyor False
 ```
-
-## Contact
-Tey Yu Teng:
-[yutengtey868@gmail.com](mailto:yutengtey868@gmail.com)

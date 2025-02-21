@@ -1,15 +1,15 @@
 /palletization_vision_server1:
   ros__parameters:
-    get_pose:
-      # Perform average of past frames or use last frame
-      average: false # true means use average, false means last valid frame
+    camera:
+      # Perform average pose calculations for n frames, or use last valid frame
+      average_pose: true 
+      # Number of previous frames to consider
+      frames: 3
       # Camera direction pointing directly down (x/y/z)
       cameraDirection: x
-      # Number of previous poses to consider
-      frames: 3
       # Dimension of box in meters. Note: Width(the longest side), Height(the shortest side)
-      width: 0.3
-      height: 0.25
+      width: 0.4
+      height: 0.3
       # Select where to start picking boxes from (i.e. topright, topleft, etc.)
       priority: bottomright
       # Region of interest bounding box (xCoord, yCoord, width, height) 
@@ -60,82 +60,70 @@
       depth_tolerance: 100
       cannyMin: 3000
       cannyMax: 3900
-      bin.dilK: 3
-      bin.eroK: 3
-      bin.dilIter: 1
-      bin.eroIter: 1
-      bin.apertureSize: 7
-      bin.L2gradient: True
-      bin.enhanceEdge: 9
+      dilK: 3
+      eroK: 3
+      dilIter: 1
+      eroIter: 1
+      apertureSize: 7
+      L2gradient: True
+      enhanceEdge: 9
 
 
 /palletization_vision_server2:
   ros__parameters:
     get_pose:
-      # Perform average of past frames or use last frame
-      average: false # true means use average, false means last valid frame
-      # Camera direction pointing directly down (x/y/z)
-      cameraDirection: x
-      # Number of previous poses to consider
+      average: true 
       frames: 3
-      # Dimension of box in meters. Note: Width(the longest side), Height(the shortest side)
-      width: 0.3
-      height: 0.25
-      # Select where to start picking boxes from (i.e. topright, topleft, etc.)
+      cameraDirection: x
+      width: 0.4
+      height: 0.3
       priority: bottomright
-      # Region of interest bounding box (xCoord, yCoord, width, height)
       roi:
       - 0
       - 0
       - 640
       - 400
-      # Topic to determine reference frame
       topic: camera_link
-      # Target frame to transform
       targetFrame: base_link
-      # Use depth with canny edge
       useDepthFiltering: true
-      # Distance between pallet and camera scanning distance in metres (m)
       palletCamDist: 1.45 
-      # Bin or box detection
       binDetection: true
       
-    # For fine tuning of vision model purposes
     normal_canny:
       # WITHOUT DEPTH
-      gaussianKernel: 11 # Remove noise and smoothen image using Guassian Blur
-      cannyMin: 30 # Canny Edge Non Maxima Suppression minimum value
-      cannyMax: 60 # Canny Edge Non Maxima Suppression maximum value
-      dilationKernel: 9 # Bridging broken edges
-      erosionKernel: 3 # Thining edges, removing noises
-      dilationIter: 1 # Dilation Iteration
-      erosionIter: 3 # Erosion Iteration
+      gaussianKernel: 11 
+      cannyMin: 30 
+      cannyMax: 60 
+      dilationKernel: 9 
+      erosionKernel: 3 
+      dilationIter: 1 
+      erosionIter: 3 
       
     # WITH DEPTH
     depth_canny:
-      gaussianKernelDepth: 3 # Remove noise and smoothen image using Guassian Blur
-      cannyMinDepth: 90 # Canny Edge Non Maxima Suppression minimum value
-      cannyMaxDepth: 180 # Canny Edge Non Maxima Suppression maximum value
-      dilationKernelDepth: 3 # Bridging broken edges
-      erosionKernelDepth: 3 # Thining edges, removing noises
-      dilationIterDepth: 1 # Dilation Iteration
-      erosionIterDepth: 1 # Erosion Iteration
-      apertureSize: 3 # Canny Edge Sobel Filter Kernel Size
-      L2gradient: true # Calculates more accurate gradient but computationally more expensive
-      enhanceEdge: 7 # Edge enhancement after canny edge detection
-      depthTolerance: 0.1 # For depth image filtering in metres (m)
+      gaussianKernelDepth: 3 
+      cannyMinDepth: 90 
+      cannyMaxDepth: 180 
+      dilationKernelDepth: 3
+      erosionKernelDepth: 3 
+      dilationIterDepth: 1 
+      erosionIterDepth: 1 
+      apertureSize: 3 
+      L2gradient: true 
+      enhanceEdge: 7 
+      depthTolerance: 0.1 
 
     # BIN DETECTION
     bin:
       depth_tolerance: 100
       cannyMin: 3000
       cannyMax: 3900
-      bin.dilK: 3
-      bin.eroK: 3
-      bin.dilIter: 1
-      bin.eroIter: 1
-      bin.apertureSize: 7
-      bin.L2gradient: True
-      bin.enhanceEdge: 9
+      dilK: 3
+      eroK: 3
+      dilIter: 1
+      eroIter: 1
+      apertureSize: 7
+      L2gradient: True
+      enhanceEdge: 9
 
 

@@ -48,6 +48,3 @@ conveyor_distx: Distance x measured from the center of the robot arm (m)
 conveyor_disty: Distance y measured from the center of the robot arm (m)
 conveyor_angle: Angle of conveyor. (0 degrees: conveyor coming directly in front, 90 degrees(1.5708 rads): coming from left, -90 degrees(-1.5708 rads): coming from right
 ```
-## Contact
-Tey Yu Teng:
-[yutengtey868@gmail.com](mailto:yutengtey868@gmail.com)
